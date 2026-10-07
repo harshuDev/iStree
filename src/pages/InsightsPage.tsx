@@ -7,6 +7,7 @@ import { labelFor, MOOD_OPTIONS, SYMPTOM_OPTIONS } from '../lib/constants';
 import { addDays, PHASE_LABEL } from '../lib/cycle';
 import { formatDate } from '../lib/dates';
 import { averagesByPhase, completedCycles, countByKey, summarize } from '../lib/insights';
+import { formatLitres } from '../lib/units';
 
 const RANGES = [
   { months: 3, label: '3 months' },
@@ -132,7 +133,7 @@ export function InsightsPage() {
                   </span>
                 </td>
                 <td className="num">{p.sleep !== null ? `${p.sleep} h` : '–'}</td>
-                <td className="num">{p.water !== null ? `${p.water} gl` : '–'}</td>
+                <td className="num">{p.water !== null ? formatLitres(p.water) : '–'}</td>
                 <td className="num">{p.energy !== null ? `${p.energy}/5` : '–'}</td>
               </tr>
             ))}

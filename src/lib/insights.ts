@@ -66,7 +66,7 @@ export interface PhaseAverages {
   phase: Phase;
   days: number;
   sleep: number | null;
-  water: number | null;
+  water: number | null; // average ml per day
   energy: number | null;
 }
 

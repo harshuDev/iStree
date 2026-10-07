@@ -20,7 +20,7 @@ export default defineConfig({
         name: 'iStree — cycle care',
         short_name: 'iStree',
         description: 'Track your cycle and get gentle, phase-aware reminders to eat, sleep, hydrate and rest.',
-        lang: 'en',
+        lang: 'en-IN',
         start_url: '/',
         scope: '/',
         display: 'standalone',

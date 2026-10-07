@@ -240,7 +240,7 @@ textarea.input { padding: 12px 14px; min-height: 88px; resize: vertical; }
 .day--outside { visibility: hidden; }
 .day--fertile { background: var(--fertile-bg); }
 .day--period-logged span { background: var(--period); color: #fff; }
-.day--period-predicted span { border: 2px dashed var(--period); color: var(--period); }
+.day.day--period-predicted span { border: 2px dashed var(--period); color: var(--period); }
 .day span { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; }
 .day--today span { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .day--selected { outline: 2px solid var(--accent); outline-offset: -2px; }

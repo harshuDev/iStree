@@ -7,6 +7,7 @@ import { useCycleState, useDailyLog, useLogPeriodEnd, useLogPeriodStart } from '
 import { PHASE_GUIDE, PHASE_LABEL } from '../lib/cycle';
 import { formatDate } from '../lib/dates';
 import { getPushState } from '../lib/push';
+import { formatWater } from '../lib/units';
 
 function greeting() {
   const h = new Date().getHours();
@@ -115,7 +116,7 @@ export function TodayPage() {
             <Link to="/check-in" className="small">Edit</Link>
           </div>
           <div className="stat-grid">
-            <div className="stat"><div className="stat__value">{log.water_intake ?? 0}</div><div className="stat__label">glasses of water</div></div>
+            <div className="stat"><div className="stat__value">{formatWater(log.water_intake ?? 0)}</div><div className="stat__label">water</div></div>
             <div className="stat"><div className="stat__value">{log.sleep_hours ?? '–'}</div><div className="stat__label">hours of sleep</div></div>
           </div>
         </section>

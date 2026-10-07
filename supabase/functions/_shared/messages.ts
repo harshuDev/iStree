@@ -37,7 +37,7 @@ export const PHASE_GUIDE: Record<Phase, PhaseGuide> = {
   ovulation: {
     tagline: 'Peak energy and confidence',
     about: 'Estrogen peaks around ovulation. You may feel strong and outgoing.',
-    eat: ['Fibre-rich veg and fruit', 'Anti-inflammatory foods like berries and leafy greens', 'Plenty of water'],
+    eat: ['Fibre-rich veg and fruit', 'Anti-inflammatory foods like berries and leafy greens', 'Plenty of water — around 2.5–3 litres a day'],
     move: 'High-energy workouts or long walks feel great now',
     rest: 'Wind down screens early — high energy can make it harder to sleep',
   },
@@ -70,12 +70,12 @@ const HYDRATION: MessageSet = {
     { title: 'A glass of water?', body: 'Your body is working hard — a warm drink can be soothing right now.' },
   ],
   follicular: [
-    { title: 'Hydration check', body: 'Keep that rising energy going with a glass of water.' },
+    { title: 'Hydration check', body: 'Keep that rising energy going with a glass (250 ml) of water.' },
     { title: 'Water break', body: 'A quick glass now keeps you sharp for the afternoon.' },
   ],
   ovulation: [
     { title: 'Drink up', body: 'Your body temperature runs a little higher now — water helps.' },
-    { title: 'Hydration check', body: 'High-energy days need extra water. Grab a glass.' },
+    { title: 'Hydration check', body: 'High-energy days need extra water — aim for 2.5–3 litres today.' },
   ],
   luteal: [
     { title: 'Water can help with bloating', body: 'It sounds backwards, but staying hydrated reduces water retention.' },

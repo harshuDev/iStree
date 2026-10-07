@@ -88,7 +88,7 @@ function localNow(timeZone: string, now: Date): { date: string; minutes: number 
       hourCycle: 'h23',
     }).formatToParts(now);
   } catch {
-    return localNow('UTC', now); // invalid/unknown timezone string
+    return localNow('Asia/Kolkata', now); // invalid/unknown timezone string
   }
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
   return {

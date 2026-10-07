@@ -39,7 +39,7 @@ export interface Database {
           flow_intensity: FlowIntensity | null;
           mood: string | null;
           symptoms: string[];
-          water_intake: number | null;
+          water_intake: number | null; // millilitres
           sleep_hours: number | null;
           energy_level: number | null;
           rested: boolean | null;

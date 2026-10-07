@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { CalendarIcon, CheckInIcon, HomeIcon, InsightsIcon, SettingsIcon } from './Icons';
 import { useSettings, useUpdateSettings } from '../hooks/queries';
@@ -16,12 +16,16 @@ const tabs = [
 export function AppShell() {
   const { data: settings } = useSettings();
   const { mutate: updateSettings } = useUpdateSettings();
+  const tzSyncAttempted = useRef(false);
 
   // Server reminders are scheduled in the user's timezone; keep it in sync
   // with the device (travel, daylight-saving rule changes).
   useEffect(() => {
     const tz = deviceTimeZone();
-    if (settings && settings.timezone !== tz && navigator.onLine) updateSettings({ timezone: tz });
+    // Once per session: a failed update rolls back and must not retry in a loop.
+    if (!settings || settings.timezone === tz || tzSyncAttempted.current || !navigator.onLine) return;
+    tzSyncAttempted.current = true;
+    updateSettings({ timezone: tz });
   }, [settings, updateSettings]);
 
   return (

@@ -12,7 +12,7 @@ A calm, private cycle tracker that sends **phase-aware reminders** to eat, drink
 |---|---|
 | **Today** | Current phase on a cycle ring, days until your next period, food / movement / rest tips for the phase, one-tap "period started / ended" |
 | **Cycle** | Month calendar with logged periods, predicted periods (dashed), fertile window and estimated ovulation; tap a day to log or remove; history table |
-| **Check-in** | Flow, mood, symptoms, water (glasses), sleep, energy, rest, notes, for today or any past day. "Nudge me later" local reminders |
+| **Check-in** | Flow, mood, symptoms, water (ml / litres, with +250 ml / +500 ml / +1 L quick-add), sleep (hours), energy, rest, notes, for today or any past day. "Nudge me later" local reminders |
 | **Insights** | Average cycle and period length, cycle-length chart (with table view), most common symptoms and the phase they cluster in, moods, sleep / water / energy by phase |
 | **Settings** | Push on/off per device, test push, which reminders and at what times, quiet hours, learned vs. manual cycle length, display name, password, JSON export, sign out, delete account |
 | **Install / onboarding** | Detects browser vs. installed app. Android/desktop gets a native install button; iOS gets step-by-step **Share → Add to Home Screen** instructions. Notification permission is only asked for once installed |
@@ -52,7 +52,8 @@ Predictions use the calendar method (ovulation ≈ 14 days before the next perio
     ├── config.toml
     ├── migrations/
     │   ├── 20261007000000_init_schema.sql          # tables, RLS, triggers, RPC
-    │   └── 20261007000100_schedule_notifications.sql # pg_cron → Edge Function every 15 min
+    │   ├── 20261007000100_schedule_notifications.sql # pg_cron → Edge Function every 15 min
+    │   └── 20261008000000_water_in_millilitres.sql   # water in ml, IST default timezone
     └── functions/
         ├── _shared/cycle.ts      # phase + prediction math (used by app AND Edge Function)
         ├── _shared/messages.ts   # phase-aware notification copy and tips
@@ -66,8 +67,8 @@ Predictions use the calendar method (ovulation ≈ 14 days before the next perio
 |---|---|
 | `auth.users` | Managed by Supabase Auth |
 | `cycles` | `start_date`, `end_date`, `cycle_length`. A trigger keeps `cycle_length` (days to the next start) up to date. Unique per user + start date |
-| `daily_logs` | One row per user per day: `flow_intensity` (enum), `mood`, `symptoms[]`, `water_intake`, `sleep_hours`, `energy_level`, `rested`, `notes` |
-| `user_settings` | Averages + override flag, `timezone`, all reminder toggles and times, quiet hours. Created automatically on sign-up |
+| `daily_logs` | One row per user per day: `flow_intensity` (enum), `mood`, `symptoms[]`, `water_intake` (**millilitres**), `sleep_hours`, `energy_level`, `rested`, `notes` |
+| `user_settings` | Averages + override flag, `timezone` (defaults to `Asia/Kolkata`, then synced from the device), all reminder toggles and times, quiet hours. Created automatically on sign-up |
 | `push_subscriptions` | `endpoint` (unique), `keys` {p256dh, auth}, `user_agent`. Written through the `register_push_subscription` RPC so a shared device can move between accounts |
 | `notification_log` | Server-only dedupe table so each reminder goes out at most once per local day |
 
@@ -234,6 +235,10 @@ curl -X POST http://localhost:54321/functions/v1/send-notifications -H "x-cron-s
 ```
 
 ---
+
+## Units & locale
+
+The app follows Indian conventions: liquids are in **millilitres / litres** (stored as ml in `daily_logs.water_intake`, shown as "750 ml" or "1.5 L"), sleep is in hours, dates use the `en-IN` format ("8 Oct"), calendars start on **Sunday**, and the default timezone is **Asia/Kolkata (IST)**. Unit helpers live in `src/lib/units.ts`.
 
 ## Privacy notes
 

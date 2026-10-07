@@ -7,12 +7,13 @@ import { addDays, phaseForDate, PHASE_LABEL, type ISODate } from '../lib/cycle';
 import type { DailyLog, FlowIntensity } from '../lib/database.types';
 import { formatDate } from '../lib/dates';
 import { cancelLocalReminder, scheduleLocalReminder, useLocalReminders } from '../lib/localReminders';
+import { DAILY_WATER_GOAL_ML, formatWater, GLASS_ML, LOCALE } from '../lib/units';
 
 interface FormState {
   flow_intensity: FlowIntensity | null;
   mood: string | null;
   symptoms: string[];
-  water_intake: number;
+  water_intake: number; // ml
   sleep_hours: number;
   energy_level: number | null;
   rested: boolean;
@@ -109,9 +110,20 @@ export function CheckInPage() {
             <div className="row row--between">
               <div>
                 <h2>Water</h2>
-                <p className="small muted">Glasses (~250 ml)</p>
+                <p className="small muted">Aim for about {formatWater(DAILY_WATER_GOAL_ML)} a day</p>
               </div>
-              <Stepper label="glasses of water" value={form.water_intake} onChange={(v) => set('water_intake', v)} min={0} max={30} />
+              <Stepper label="water intake" value={form.water_intake} onChange={(v) => set('water_intake', v)} min={0} max={10000} step={GLASS_ML} format={formatWater} />
+            </div>
+            <div className="chips" role="group" aria-label="Add water">
+              {[
+                { ml: GLASS_ML, label: '+ Glass (250 ml)' },
+                { ml: 500, label: '+ Bottle (500 ml)' },
+                { ml: 1000, label: '+ 1 L' },
+              ].map((o) => (
+                <button key={o.ml} type="button" className="chip" onClick={() => set('water_intake', Math.min(10000, form.water_intake + o.ml))}>
+                  {o.label}
+                </button>
+              ))}
             </div>
             <div className="row row--between">
               <div>
@@ -171,7 +183,7 @@ function QuickReminders({ phase }: { phase: Parameters<typeof scheduleLocalRemin
         <div key={r.id} className="row row--between small">
           <span>
             {r.kind === 'rest_nudge' ? 'Rest' : 'Water'} at{' '}
-            {new Date(r.fireAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(r.fireAt).toLocaleTimeString(LOCALE, { hour: 'numeric', minute: '2-digit' })}
           </span>
           <button type="button" className="btn btn--ghost btn--small" onClick={() => cancelLocalReminder(r.id)}>Cancel</button>
         </div>

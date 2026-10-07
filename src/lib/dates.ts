@@ -1,11 +1,12 @@
 import { todayInTimeZone, type ISODate } from './cycle';
+import { DEFAULT_TIME_ZONE, LOCALE } from './units';
 
-export const deviceTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+export const deviceTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIME_ZONE;
 
 /** Today's date on this device. */
 export const today = (): ISODate => todayInTimeZone(deviceTimeZone());
 
-const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, { ...opts, timeZone: 'UTC' });
+const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(LOCALE, { ...opts, timeZone: 'UTC' });
 
 /** Formats an ISO calendar date without timezone drift. */
 export function formatDate(date: ISODate, style: 'short' | 'long' | 'weekday' = 'short'): string {

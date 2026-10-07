@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { buildCalendarMarks, fromDayNumber, toDayNumber, type CycleRecord, type CycleSettings, type ISODate } from '../lib/cycle';
 import { formatDate, formatMonth } from '../lib/dates';
 
-const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// Weeks start on Sunday, as on Indian calendars.
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface Props {
   cycles: readonly CycleRecord[];
@@ -22,7 +23,7 @@ export function Calendar({ cycles, settings, today, selected, onSelect, loggedDa
   const { cells, marks } = useMemo(() => {
     const first = Date.UTC(cursor.year, cursor.month, 1) / 86_400_000;
     const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate();
-    const lead = (new Date(first * 86_400_000).getUTCDay() + 6) % 7; // Monday-first
+    const lead = new Date(first * 86_400_000).getUTCDay(); // Sunday-first
     const cells: (ISODate | null)[] = [
       ...Array.from({ length: lead }, () => null),
       ...Array.from({ length: daysInMonth }, (_, i) => fromDayNumber(first + i)),

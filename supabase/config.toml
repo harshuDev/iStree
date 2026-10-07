@@ -1,0 +1,18 @@
+# Minimal Supabase CLI config. `supabase start` fills in defaults for
+# everything not listed here. See https://supabase.com/docs/guides/local-development/cli/config
+project_id = "istree"
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://localhost:5173", "https://*.vercel.app"]
+
+[auth.email]
+enable_confirmations = true
+
+# Called by pg_cron with a shared secret (x-cron-secret), and by signed-in users
+# for a test push; the function verifies both itself.
+[functions.send-notifications]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true

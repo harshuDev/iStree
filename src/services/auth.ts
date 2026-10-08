@@ -14,11 +14,6 @@ export async function signUp(email: string, password: string): Promise<boolean> 
   return !data.session;
 }
 
-export async function sendMagicLink(email: string) {
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
-  if (error) throw error;
-}
-
 export async function sendPasswordReset(email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${redirectTo()}settings` });
   if (error) throw error;

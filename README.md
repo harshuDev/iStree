@@ -141,7 +141,7 @@ In **Authentication → URL Configuration**:
 - **Site URL:** your production URL, e.g. `https://istree.vercel.app`
 - **Redirect URLs:** add `https://istree.vercel.app/**`, `https://*-<your-team>.vercel.app/**` (previews) and `http://localhost:5173/**`
 
-Email/password and magic links work out of the box. For production volumes, configure custom SMTP under **Authentication → Emails**.
+Email/password sign-in works out of the box. For production volumes, configure custom SMTP under **Authentication → Emails**.
 
 ---
 

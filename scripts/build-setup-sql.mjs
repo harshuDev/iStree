@@ -16,8 +16,9 @@ const header = `${rule}
 --   1. Dashboard → Database → Extensions: make sure "pg_cron" and "pg_net" are
 --      enabled (the schedule part below also tries to enable them).
 --   2. Dashboard → SQL Editor → New query → paste this whole file → Run.
---   3. Run it ONCE on a fresh project. It is the files in supabase/migrations/
---      concatenated in order, plus the Vault secrets.
+--   3. Safe to run more than once: anything that already exists is skipped
+--      or replaced, and existing data is kept. It is the files in
+--      supabase/migrations/ concatenated in order, plus the Vault secrets.
 --   4. Copy the cron secret shown in the results into your Edge Function
 --      secrets as CRON_SECRET.
 --

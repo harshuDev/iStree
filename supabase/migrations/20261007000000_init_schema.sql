@@ -2,11 +2,18 @@
 -- Tables: cycles, daily_logs, user_settings, push_subscriptions, notification_log
 -- Every table is protected by Row Level Security so a user can only see and
 -- change their own rows. `auth.users` is managed by Supabase Auth.
+--
+-- Safe to re-run: every statement skips or replaces what already exists.
 
 -- ---------------------------------------------------------------------------
 -- Enums
 -- ---------------------------------------------------------------------------
-create type public.flow_intensity as enum ('none', 'spotting', 'light', 'medium', 'heavy');
+do $$
+begin
+  create type public.flow_intensity as enum ('none', 'spotting', 'light', 'medium', 'heavy');
+exception when duplicate_object then null; -- already created by an earlier run
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Shared helpers
@@ -27,7 +34,7 @@ $$;
 -- cycle's start to the next cycle's start, maintained by a trigger, and is
 -- null for the current (most recent) cycle.
 -- ---------------------------------------------------------------------------
-create table public.cycles (
+create table if not exists public.cycles (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
   start_date   date not null,
@@ -40,8 +47,9 @@ create table public.cycles (
   constraint cycles_user_start_unique unique (user_id, start_date)
 );
 
-create index cycles_user_start_idx on public.cycles (user_id, start_date desc);
+create index if not exists cycles_user_start_idx on public.cycles (user_id, start_date desc);
 
+drop trigger if exists cycles_set_updated_at on public.cycles;
 create trigger cycles_set_updated_at
 before update on public.cycles
 for each row execute function public.set_updated_at();
@@ -70,6 +78,7 @@ begin
 end;
 $$;
 
+drop trigger if exists cycles_recompute_lengths on public.cycles;
 create trigger cycles_recompute_lengths
 after insert or delete or update of start_date on public.cycles
 for each row execute function public.recompute_cycle_lengths();
@@ -77,7 +86,7 @@ for each row execute function public.recompute_cycle_lengths();
 -- ---------------------------------------------------------------------------
 -- daily_logs: one check-in per user per calendar day.
 -- ---------------------------------------------------------------------------
-create table public.daily_logs (
+create table if not exists public.daily_logs (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
   date           date not null,
@@ -94,8 +103,9 @@ create table public.daily_logs (
   constraint daily_logs_user_date_unique unique (user_id, date)
 );
 
-create index daily_logs_user_date_idx on public.daily_logs (user_id, date desc);
+create index if not exists daily_logs_user_date_idx on public.daily_logs (user_id, date desc);
 
+drop trigger if exists daily_logs_set_updated_at on public.daily_logs;
 create trigger daily_logs_set_updated_at
 before update on public.daily_logs
 for each row execute function public.set_updated_at();
@@ -104,7 +114,7 @@ for each row execute function public.set_updated_at();
 -- user_settings: one row per user, created automatically on sign-up.
 -- Times are local wall-clock times interpreted in `timezone`.
 -- ---------------------------------------------------------------------------
-create table public.user_settings (
+create table if not exists public.user_settings (
   user_id                  uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   display_name             text check (char_length(display_name) <= 60),
   average_cycle_length     smallint not null default 28 check (average_cycle_length between 15 and 60),
@@ -134,6 +144,7 @@ create table public.user_settings (
   constraint user_settings_hydration_max check (cardinality(hydration_times) <= 8)
 );
 
+drop trigger if exists user_settings_set_updated_at on public.user_settings;
 create trigger user_settings_set_updated_at
 before update on public.user_settings
 for each row execute function public.set_updated_at();
@@ -151,6 +162,7 @@ begin
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
@@ -158,7 +170,7 @@ for each row execute function public.handle_new_user();
 -- ---------------------------------------------------------------------------
 -- push_subscriptions: one row per device/browser Web Push subscription.
 -- ---------------------------------------------------------------------------
-create table public.push_subscriptions (
+create table if not exists public.push_subscriptions (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   endpoint      text not null unique,
@@ -169,13 +181,13 @@ create table public.push_subscriptions (
   constraint push_subscriptions_keys_shape check (keys ? 'p256dh' and keys ? 'auth')
 );
 
-create index push_subscriptions_user_idx on public.push_subscriptions (user_id);
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
 
 -- ---------------------------------------------------------------------------
 -- notification_log: written only by the scheduled Edge Function (service role)
 -- to guarantee each reminder is sent at most once per local day.
 -- ---------------------------------------------------------------------------
-create table public.notification_log (
+create table if not exists public.notification_log (
   id          bigint generated always as identity primary key,
   user_id     uuid not null references auth.users (id) on delete cascade,
   kind        text not null,       -- e.g. 'phase_change', 'hydration', 'checkin'
@@ -185,7 +197,7 @@ create table public.notification_log (
   constraint notification_log_once unique (user_id, kind, slot, local_date)
 );
 
-create index notification_log_sent_at_idx on public.notification_log (sent_at);
+create index if not exists notification_log_sent_at_idx on public.notification_log (sent_at);
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security
@@ -197,40 +209,55 @@ alter table public.push_subscriptions enable row level security;
 alter table public.notification_log   enable row level security;
 
 -- cycles
+drop policy if exists "cycles: select own" on public.cycles;
 create policy "cycles: select own" on public.cycles
   for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "cycles: insert own" on public.cycles;
 create policy "cycles: insert own" on public.cycles
   for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "cycles: update own" on public.cycles;
 create policy "cycles: update own" on public.cycles
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "cycles: delete own" on public.cycles;
 create policy "cycles: delete own" on public.cycles
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- daily_logs
+drop policy if exists "daily_logs: select own" on public.daily_logs;
 create policy "daily_logs: select own" on public.daily_logs
   for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "daily_logs: insert own" on public.daily_logs;
 create policy "daily_logs: insert own" on public.daily_logs
   for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "daily_logs: update own" on public.daily_logs;
 create policy "daily_logs: update own" on public.daily_logs
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "daily_logs: delete own" on public.daily_logs;
 create policy "daily_logs: delete own" on public.daily_logs
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- user_settings (row is created by trigger; insert allowed as a fallback)
+drop policy if exists "user_settings: select own" on public.user_settings;
 create policy "user_settings: select own" on public.user_settings
   for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "user_settings: insert own" on public.user_settings;
 create policy "user_settings: insert own" on public.user_settings
   for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "user_settings: update own" on public.user_settings;
 create policy "user_settings: update own" on public.user_settings
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- push_subscriptions
+drop policy if exists "push_subscriptions: select own" on public.push_subscriptions;
 create policy "push_subscriptions: select own" on public.push_subscriptions
   for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "push_subscriptions: insert own" on public.push_subscriptions;
 create policy "push_subscriptions: insert own" on public.push_subscriptions
   for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "push_subscriptions: update own" on public.push_subscriptions;
 create policy "push_subscriptions: update own" on public.push_subscriptions
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "push_subscriptions: delete own" on public.push_subscriptions;
 create policy "push_subscriptions: delete own" on public.push_subscriptions
   for delete to authenticated using ((select auth.uid()) = user_id);
 

@@ -1,8 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { sendMagicLink, sendPasswordReset, signInWithPassword, signUp } from '../services/auth';
+import { sendPasswordReset, signInWithPassword, signUp } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
 
-type Mode = 'signin' | 'signup' | 'magic' | 'reset';
+type Mode = 'signin' | 'signup' | 'reset';
+
+// One illustration per tab. Both are rendered (stacked) so switching tabs
+// crossfades instantly instead of waiting for a download.
+const HERO = {
+  signin: {
+    src: '/auth/sign-in.webp',
+    alt: 'Illustrated planner page tracking mood, hydration, sleep and meals around a daily wheel',
+    title: 'Welcome back',
+  },
+  signup: {
+    src: '/auth/create-account.webp',
+    alt: 'Illustrated hand holding a menstrual cup with flowers growing from it',
+    title: 'Your cycle, your rhythm',
+  },
+} as const;
 
 export function AuthPage() {
   const [mode, setMode] = useState<Mode>('signin');
@@ -20,10 +35,6 @@ export function AuthPage() {
     try {
       if (mode === 'signin') await signInWithPassword(email, password);
       if (mode === 'signup' && (await signUp(email, password))) setNotice('Check your inbox to confirm your email, then sign in.');
-      if (mode === 'magic') {
-        await sendMagicLink(email);
-        setNotice('We sent you a sign-in link. Open it on this device.');
-      }
       if (mode === 'reset') {
         await sendPasswordReset(email);
         setNotice('If an account exists, a reset link is on its way.');
@@ -36,14 +47,35 @@ export function AuthPage() {
   };
 
   const needsPassword = mode === 'signin' || mode === 'signup';
+  const heroMode = mode === 'signup' ? 'signup' : 'signin';
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setError(null);
+    setNotice(null);
+  };
 
   return (
     <main className="app app--bare">
-      <div className="page" style={{ paddingTop: '8vh' }}>
-        <div className="center stack" style={{ alignItems: 'center' }}>
-          <img src="/pwa-192x192.png" alt="" width={72} height={72} style={{ borderRadius: 18 }} />
-          <h1>iStree</h1>
-          <p className="muted">Gentle cycle tracking with reminders that follow your rhythm.</p>
+      <div className="page">
+        <div className="auth-hero">
+          {(Object.keys(HERO) as (keyof typeof HERO)[]).map((key) => (
+            <img
+              key={key}
+              src={HERO[key].src}
+              alt={key === heroMode ? HERO[key].alt : ''}
+              aria-hidden={key !== heroMode}
+              className={`auth-hero__img auth-hero__img--${key}${key === heroMode ? ' is-active' : ''}`}
+              decoding="async"
+            />
+          ))}
+        </div>
+
+        <div className="row" style={{ gap: 12 }}>
+          <img src="/pwa-192x192.png" alt="" width={44} height={44} style={{ borderRadius: 12 }} />
+          <div className="stack" style={{ gap: 2 }}>
+            <h1 style={{ fontSize: '1.35rem' }}>{mode === 'reset' ? 'iStree' : HERO[heroMode].title}</h1>
+            <p className="muted small">Gentle cycle tracking with reminders that follow your rhythm.</p>
+          </div>
         </div>
 
         {!isSupabaseConfigured && (
@@ -52,9 +84,9 @@ export function AuthPage() {
 
         {mode !== 'reset' && (
           <div className="segmented" role="group" aria-label="Sign-in method">
-            {(['signin', 'signup', 'magic'] as const).map((m) => (
-              <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
-                {m === 'signin' ? 'Sign in' : m === 'signup' ? 'Create account' : 'Email link'}
+            {(['signin', 'signup'] as const).map((m) => (
+              <button key={m} type="button" aria-pressed={mode === m} onClick={() => switchMode(m)}>
+                {m === 'signin' ? 'Sign in' : 'Create account'}
               </button>
             ))}
           </div>
@@ -84,15 +116,15 @@ export function AuthPage() {
           {error && <div className="alert alert--error">{error}</div>}
           {notice && <div className="alert alert--success">{notice}</div>}
           <button className="btn btn--block" disabled={busy}>
-            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : mode === 'magic' ? 'Send me a link' : 'Send reset link'}
+            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
           </button>
           {mode === 'signin' && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => setMode('reset')}>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => switchMode('reset')}>
               Forgot password?
             </button>
           )}
           {mode === 'reset' && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => setMode('signin')}>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => switchMode('signin')}>
               Back to sign in
             </button>
           )}

@@ -14,7 +14,7 @@ export const supabase = createClient<Database>(url || 'http://localhost:54321', 
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true, // completes magic-link / email-confirmation redirects
+    detectSessionInUrl: true, // completes email-confirmation and password-reset redirects
     flowType: 'pkce',
   },
 });

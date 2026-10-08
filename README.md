@@ -15,6 +15,7 @@ A calm, private cycle tracker that sends **phase-aware reminders** to eat, drink
 | **Check-in** | Flow, mood, symptoms, water (ml / litres, with +250 ml / +500 ml / +1 L quick-add), sleep (hours), energy, rest, notes, for today or any past day. "Nudge me later" local reminders |
 | **Insights** | Average cycle and period length, cycle-length chart (with table view), most common symptoms and the phase they cluster in, moods, sleep / water / energy by phase |
 | **Settings** | Push on/off per device, test push, which reminders and at what times, quiet hours, learned vs. manual cycle length, display name, password, JSON export, sign out, delete account |
+| **Appearance** | Lunari-inspired design: Urbanist font, pink accent, soft cards. System / Light / Dark theme picker in Account → App appearance (saved per device) |
 | **Install / onboarding** | Detects browser vs. installed app. Android/desktop gets a native install button; iOS gets step-by-step **Share → Add to Home Screen** instructions. Notification permission is only asked for once installed |
 
 Predictions use the calendar method (ovulation ≈ 14 days before the next period, fertile window = 5 days before through 1 day after). Once two full cycles are logged, averages are learned from your history. **They're estimates for wellbeing, not contraception or diagnosis**, and the UI says so.

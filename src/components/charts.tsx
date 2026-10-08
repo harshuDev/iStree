@@ -2,55 +2,88 @@ import { useState } from 'react';
 import { formatDate } from '../lib/dates';
 import type { CyclePoint } from '../lib/insights';
 
-/** Vertical bars of cycle length per cycle, with a dashed average line. Single series → one hue, no legend. */
-export function CycleLengthChart({ points, average }: { points: CyclePoint[]; average: number | null }) {
+/** Rounded-top bar path anchored to the baseline (4px data-end radius). */
+function barPath(x: number, w: number, top: number, base: number) {
+  const r = Math.min(6, base - top, w / 2);
+  return `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + w - r} Q${x + w},${top} ${x + w},${top + r} V${base} Z`;
+}
+
+interface BarDatum {
+  key: string;
+  label: string; // axis label
+  title: string; // tooltip title
+  value: number | null;
+}
+
+/**
+ * Single-series vertical bars with an optional dashed reference line.
+ * Single series → one hue, no legend (the card title names it).
+ */
+export function BarChart({
+  data,
+  color,
+  max,
+  reference,
+  referenceLabel,
+  format,
+  ariaLabel,
+}: {
+  data: BarDatum[];
+  color: string;
+  max: number;
+  reference?: number | null;
+  referenceLabel?: string;
+  format: (v: number) => string;
+  ariaLabel: string;
+}) {
   const [active, setActive] = useState<number | null>(null);
   const W = 320;
-  const H = 160;
-  const pad = { top: 12, right: 8, bottom: 22, left: 28 };
-  const maxY = Math.max(40, ...points.map((p) => p.length)) + 2;
+  const H = 170;
+  const pad = { top: 14, right: 8, bottom: 22, left: 34 };
   const innerW = W - pad.left - pad.right;
   const innerH = H - pad.top - pad.bottom;
-  const slot = innerW / Math.max(points.length, 1);
-  const barW = Math.min(28, slot - 2); // >= 2px surface gap between bars
-  const y = (v: number) => pad.top + innerH - (v / maxY) * innerH;
-  const ticks = [0, 10, 20, 30, 40].filter((t) => t <= maxY);
-  const shown = active !== null ? points[active] : null;
+  const slot = innerW / Math.max(data.length, 1);
+  const barW = Math.min(26, slot - 6);
+  const y = (v: number) => pad.top + innerH - (Math.min(v, max) / max) * innerH;
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
+  const shown = active !== null ? data[active] : null;
 
   return (
     <div className="stack" style={{ gap: 4 }}>
       <div className="chart-tooltip" aria-live="polite">
-        {shown ? `Started ${formatDate(shown.start)} · ${shown.length} days` : 'Tap a bar for details'}
+        {shown ? `${shown.title} · ${shown.value === null ? 'not logged' : format(shown.value)}` : 'Tap a bar for details'}
       </div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Cycle length per cycle in days">
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>
         {ticks.map((t) => (
           <g key={t}>
             <line className="grid" x1={pad.left} x2={W - pad.right} y1={y(t)} y2={y(t)} />
-            <text x={pad.left - 6} y={y(t) + 4} textAnchor="end">{t}</text>
+            <text x={pad.left - 6} y={y(t) + 4} textAnchor="end">{format(t)}</text>
           </g>
         ))}
-        {points.map((p, i) => {
+        {data.map((d, i) => {
           const x = pad.left + i * slot + (slot - barW) / 2;
-          const top = y(p.length);
-          const h = y(0) - top;
-          const r = Math.min(4, h);
-          // Rounded data-end, square baseline.
-          const d = `M${x},${y(0)} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${y(0)} Z`;
           return (
-            <g key={p.start}>
-              {/* Hit target taller than the mark */}
+            <g key={d.key}>
               <rect x={pad.left + i * slot} y={pad.top} width={slot} height={innerH} fill="transparent" onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onClick={() => setActive(i)} />
-              <path className="bar" d={d} tabIndex={0} onFocus={() => setActive(i)} onBlur={() => setActive(null)} aria-label={`${formatDate(p.start)}: ${p.length} days`} style={{ pointerEvents: 'none', opacity: active === null || active === i ? 1 : 0.55 }} />
-              {(i === 0 || i === points.length - 1) && (
-                <text x={x + barW / 2} y={H - 6} textAnchor="middle">{formatDate(p.start)}</text>
+              {d.value !== null && d.value > 0 && (
+                <path
+                  d={barPath(x, barW, y(d.value), y(0))}
+                  fill={color}
+                  tabIndex={0}
+                  onFocus={() => setActive(i)}
+                  onBlur={() => setActive(null)}
+                  aria-label={`${d.title}: ${format(d.value)}`}
+                  style={{ pointerEvents: 'none', opacity: active === null || active === i ? 1 : 0.45 }}
+                />
               )}
+              <text x={x + barW / 2} y={H - 6} textAnchor="middle">{d.label}</text>
             </g>
           );
         })}
-        {average !== null && (
+        {reference != null && reference <= max && (
           <g>
-            <line className="avg-line" x1={pad.left} x2={W - pad.right} y1={y(average)} y2={y(average)} />
-            <text x={W - pad.right} y={y(average) - 4} textAnchor="end">avg {average} d</text>
+            <line className="avg-line" x1={pad.left} x2={W - pad.right} y1={y(reference)} y2={y(reference)} />
+            <text x={W - pad.right} y={y(reference) - 5} textAnchor="end">{referenceLabel ?? format(reference)}</text>
           </g>
         )}
       </svg>
@@ -58,13 +91,33 @@ export function CycleLengthChart({ points, average }: { points: CyclePoint[]; av
   );
 }
 
-/** Horizontal labeled bars for counts (symptoms, moods). */
-export function CountBars({ rows, max }: { rows: { label: string; count: number; hint?: string }[]; max?: number }) {
+/** Cycle length per completed cycle, with the average as a dashed line. */
+export function CycleLengthChart({ points, average }: { points: CyclePoint[]; average: number | null }) {
+  return (
+    <BarChart
+      data={points.map((p, i) => ({
+        key: p.start,
+        label: i === 0 || i === points.length - 1 ? formatDate(p.start) : '',
+        title: `Started ${formatDate(p.start)}`,
+        value: p.length,
+      }))}
+      color="var(--primary)"
+      max={Math.max(40, ...points.map((p) => p.length))}
+      reference={average}
+      referenceLabel={average !== null ? `avg ${average} d` : undefined}
+      format={(v) => `${Math.round(v)}`}
+      ariaLabel="Cycle length per cycle in days"
+    />
+  );
+}
+
+/** Horizontal labeled bars for counts. */
+export function CountBars({ rows, max }: { rows: { label: string; count: number }[]; max?: number }) {
   const top = max ?? Math.max(1, ...rows.map((r) => r.count));
   return (
     <div className="bars">
       {rows.map((r) => (
-        <div key={r.label} className="bar-row" title={r.hint}>
+        <div key={r.label} className="bar-row">
           <span className="bar-row__label">{r.label}</span>
           <span className="bar-row__track">
             <span className="bar-row__fill" style={{ width: `${(r.count / top) * 100}%`, display: 'block' }} />

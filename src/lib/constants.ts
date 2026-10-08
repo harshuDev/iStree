@@ -20,21 +20,24 @@ export const MOOD_OPTIONS = [
 ] as const;
 
 export const SYMPTOM_OPTIONS = [
-  { value: 'cramps', label: 'Cramps' },
-  { value: 'headache', label: 'Headache' },
-  { value: 'bloating', label: 'Bloating' },
-  { value: 'tender_breasts', label: 'Tender breasts' },
-  { value: 'back_pain', label: 'Back pain' },
-  { value: 'acne', label: 'Acne' },
-  { value: 'cravings', label: 'Cravings' },
-  { value: 'nausea', label: 'Nausea' },
-  { value: 'fatigue', label: 'Fatigue' },
-  { value: 'insomnia', label: 'Poor sleep' },
-  { value: 'discharge', label: 'Discharge' },
-  { value: 'dizziness', label: 'Dizziness' },
+  { value: 'cramps', label: 'Cramps', emoji: '😖' },
+  { value: 'headache', label: 'Headache', emoji: '🤕' },
+  { value: 'bloating', label: 'Bloating', emoji: '🎈' },
+  { value: 'tender_breasts', label: 'Tender breasts', emoji: '💗' },
+  { value: 'back_pain', label: 'Back pain', emoji: '🦴' },
+  { value: 'acne', label: 'Acne', emoji: '🫧' },
+  { value: 'cravings', label: 'Cravings', emoji: '🍫' },
+  { value: 'nausea', label: 'Nausea', emoji: '🤢' },
+  { value: 'fatigue', label: 'Fatigue', emoji: '🥱' },
+  { value: 'insomnia', label: 'Poor sleep', emoji: '🌙' },
+  { value: 'discharge', label: 'Discharge', emoji: '💧' },
+  { value: 'dizziness', label: 'Dizziness', emoji: '😵‍💫' },
 ] as const;
 
 export const ENERGY_LABELS = ['Drained', 'Low', 'Okay', 'Good', 'Great'];
 
 export const labelFor = (options: readonly { value: string; label: string }[], value: string) =>
   options.find((o) => o.value === value)?.label ?? value;
+
+export const emojiFor = (options: readonly { value: string; emoji: string }[], value: string) =>
+  options.find((o) => o.value === value)?.emoji ?? '•';

@@ -36,7 +36,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,webmanifest,woff2}'],
       },
       devOptions: {
         // Lets you exercise the service worker under `npm run dev`.

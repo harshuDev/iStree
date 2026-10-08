@@ -12,6 +12,7 @@
 
 ## Conventions
 - All Supabase calls go through `src/services/`; React Query hooks are in `src/hooks/queries.ts`.
+- UI: Lunari-inspired design system in `src/styles/global.css` (tokens for light + dark; brand pink `#FF689B`, Urbanist font bundled via `@fontsource-variable/urbanist`). Theme preference (System/Light/Dark) lives in `src/lib/theme.ts` as `<html data-theme>`.
 - Units: millilitres/litres, `en-IN` formatting, Sunday-first calendar, default timezone `Asia/Kolkata`.
 - Cycle math and notification copy are shared with the Edge Function: `supabase/functions/_shared/`.
 - Before pushing: `npx tsc -b`, `npm test`, `npm run build`.

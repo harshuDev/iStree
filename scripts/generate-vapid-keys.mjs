@@ -19,7 +19,7 @@ npx supabase secrets set \\
 
 # 3) Supabase Vault (SQL editor) so pg_cron can call the function
 select vault.create_secret('${cronSecret}', 'cron_secret');
-select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+select vault.create_secret('https://qrgbfxrzypqtckfdfkil.supabase.co', 'project_url');
 
 # Changing VAPID keys later invalidates every existing push subscription.
 `);

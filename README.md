@@ -90,7 +90,7 @@ npm run build                   # typecheck + production build
 
 | Variable | Where | Purpose |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `.env.local` + Vercel | Supabase project URL |
+| `VITE_SUPABASE_URL` | `.env.local` + Vercel | `https://qrgbfxrzypqtckfdfkil.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `.env.local` + Vercel | Public anon key (safe in the browser; RLS protects data) |
 | `VITE_VAPID_PUBLIC_KEY` | `.env.local` + Vercel | Web Push public key used by the browser to subscribe |
 | `VAPID_PUBLIC_KEY` | Supabase secret | Same public key, for the Edge Function |
@@ -114,7 +114,7 @@ npm run vapid
 
 ```bash
 npx supabase login
-npx supabase link --project-ref <your-project-ref>
+npx supabase link --project-ref qrgbfxrzypqtckfdfkil
 npx supabase db push                 # applies supabase/migrations/*.sql in order
 ```
 
@@ -127,7 +127,7 @@ Open **SQL Editor** and run each file in `supabase/migrations/` **in filename or
 ### Regenerate types after schema changes
 
 ```bash
-npx supabase gen types typescript --project-id <ref> > src/lib/database.types.ts
+npx supabase gen types typescript --project-id qrgbfxrzypqtckfdfkil > src/lib/database.types.ts
 ```
 
 ### Auth settings
@@ -161,7 +161,7 @@ npx supabase functions deploy delete-account
 Store two Vault secrets (SQL editor) so the cron job can reach the function:
 
 ```sql
-select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+select vault.create_secret('https://qrgbfxrzypqtckfdfkil.supabase.co', 'project_url');
 select vault.create_secret('<same CRON_SECRET as above>', 'cron_secret');
 ```
 

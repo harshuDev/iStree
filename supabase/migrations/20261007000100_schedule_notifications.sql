@@ -5,7 +5,7 @@
 -- BEFORE this job can succeed, store two secrets in Supabase Vault
 -- (Dashboard → Project Settings → Vault, or run in the SQL editor):
 --
---   select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+--   select vault.create_secret('https://qrgbfxrzypqtckfdfkil.supabase.co', 'project_url');
 --   select vault.create_secret('<same value as the CRON_SECRET function secret>', 'cron_secret');
 --
 -- The migration itself succeeds without them; the job just fails until they exist.

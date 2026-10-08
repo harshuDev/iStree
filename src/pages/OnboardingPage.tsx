@@ -1,31 +1,39 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from '../components/Icons';
 import { InstallGuide } from '../components/InstallGuide';
 import { NotificationsCard } from '../components/NotificationsCard';
-import { ErrorNote, Stepper } from '../components/ui';
+import { WheelPicker } from '../components/WheelPicker';
+import { ErrorNote } from '../components/ui';
 import { useLogPeriodStart, useUpdateSettings } from '../hooks/queries';
-import { addDays } from '../lib/cycle';
-import { deviceTimeZone, today } from '../lib/dates';
+import { addDays, fromDayNumber, type ISODate } from '../lib/cycle';
+import { deviceTimeZone, formatMonth, today as getToday } from '../lib/dates';
 import { canRequestPush, detectPlatform, isStandalone } from '../lib/pwa';
+
+const STEPS = 5;
+const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 
 export function OnboardingPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [lastStart, setLastStart] = useState('');
-  const [cycleLength, setCycleLength] = useState(28);
+  const today = getToday();
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState('');
   const [periodLength, setPeriodLength] = useState(5);
+  const [cycleLength, setCycleLength] = useState(28);
+  const [lastStart, setLastStart] = useState<ISODate | null>(null);
   const updateSettings = useUpdateSettings();
   const logStart = useLogPeriodStart();
-  const todayDate = today();
+  const needsInstall = detectPlatform() !== 'desktop' && !isStandalone();
 
-  const saveBasics = async () => {
+  const saveAndContinue = async () => {
     await updateSettings.mutateAsync({
+      display_name: name.trim() || null,
       average_cycle_length: cycleLength,
       average_period_length: periodLength,
       timezone: deviceTimeZone(),
     });
     if (lastStart) await logStart.mutateAsync(lastStart);
-    setStep(2);
+    setStep(5);
   };
 
   const finish = async () => {
@@ -33,62 +41,112 @@ export function OnboardingPage() {
     navigate('/', { replace: true });
   };
 
-  const needsInstall = detectPlatform() !== 'desktop' && !isStandalone();
+  const next = () => (step === 4 ? void saveAndContinue() : step === 5 ? void finish() : setStep(step + 1));
+  const busy = updateSettings.isPending || logStart.isPending;
+
+  const title = [
+    "What's your name?",
+    'How long does your period usually last?',
+    'How long does your cycle usually last?',
+    'When did your last period start?',
+    needsInstall ? 'Add iStree to your home screen' : 'Turn on gentle reminders',
+  ][step - 1];
 
   return (
     <main className="app app--bare">
-      <div className="page">
-        <header className="page-header">
-          <span className="small muted">Step {step} of 2</span>
-          <h1>{step === 1 ? 'Tell us about your cycle' : needsInstall ? 'Install iStree' : 'Turn on reminders'}</h1>
-          <p>{step === 1 ? 'A rough idea is fine — predictions improve as you log.' : 'Phase-aware nudges for water, food, rest and sleep.'}</p>
-        </header>
+      <div className="page" style={{ minHeight: 'calc(100dvh - 40px)' }}>
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="icon-btn" aria-label="Back" disabled={step === 1} onClick={() => setStep(step - 1)}>
+            <ChevronLeft />
+          </button>
+          <div className="progress" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step}>
+            <span style={{ width: `${(step / STEPS) * 100}%` }} />
+          </div>
+          <span className="small bold" style={{ minWidth: 36, textAlign: 'right' }}>{step} / {STEPS}</span>
+        </div>
 
-        {step === 1 ? (
-          <>
-            <div className="card">
-              <div className="field">
-                <label htmlFor="last-start">When did your last period start?</label>
-                <input
-                  id="last-start"
-                  className="input"
-                  type="date"
-                  max={todayDate}
-                  min={addDays(todayDate, -90)}
-                  value={lastStart}
-                  onChange={(e) => setLastStart(e.target.value)}
-                />
-                <span className="small muted">Leave empty if you don't remember.</span>
-              </div>
-              <div className="field">
-                <span className="field-label">Typical cycle length</span>
-                <Stepper label="cycle length" value={cycleLength} onChange={setCycleLength} min={15} max={60} format={(v) => `${v} days`} />
-              </div>
-              <div className="field">
-                <span className="field-label">Typical period length</span>
-                <Stepper label="period length" value={periodLength} onChange={setPeriodLength} min={1} max={15} format={(v) => `${v} days`} />
-              </div>
-            </div>
-            <ErrorNote error={updateSettings.error ?? logStart.error} />
-            <button className="btn btn--block" onClick={saveBasics} disabled={updateSettings.isPending || logStart.isPending}>
-              Continue
-            </button>
-          </>
-        ) : (
-          <>
-            {needsInstall && (
-              <div className="card">
-                <InstallGuide />
-              </div>
-            )}
-            {canRequestPush() && <NotificationsCard compact />}
-            <ErrorNote error={updateSettings.error} />
-            <button className="btn btn--block" onClick={finish} disabled={updateSettings.isPending}>
-              {needsInstall ? "I'll do this later" : 'Done'}
-            </button>
-          </>
-        )}
+        <h1 className="center" style={{ fontSize: '1.5rem', padding: '8px 12px 0' }}>{title}</h1>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16 }}>
+          {step === 1 && (
+            <>
+              <input className="input" style={{ textAlign: 'center', fontSize: '1.6rem', minHeight: 72 }} placeholder="Your name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+              <p className="center small faint">Optional — it's only used to greet you.</p>
+            </>
+          )}
+          {step === 2 && <WheelPicker label="Period length" values={range(1, 15)} value={periodLength} onChange={setPeriodLength} unit="days" />}
+          {step === 3 && (
+            <>
+              <WheelPicker label="Cycle length" values={range(15, 60)} value={cycleLength} onChange={setCycleLength} unit="days" />
+              <p className="center small faint">Most cycles are 21–35 days. A rough guess is fine.</p>
+            </>
+          )}
+          {step === 4 && (
+            <>
+              <MonthPicker today={today} value={lastStart} onChange={setLastStart} />
+              <button type="button" className="chip" style={{ alignSelf: 'center' }} aria-pressed={lastStart === null} onClick={() => setLastStart(null)}>
+                I don't remember
+              </button>
+            </>
+          )}
+          {step === 5 && (
+            <>
+              {needsInstall && <div className="card" style={{ background: 'var(--surface-2)', boxShadow: 'none' }}><InstallGuide /></div>}
+              {canRequestPush() && <NotificationsCard compact />}
+              {!needsInstall && !canRequestPush() && <p className="center muted">You're all set! 🌸</p>}
+            </>
+          )}
+        </div>
+
+        <ErrorNote error={updateSettings.error ?? logStart.error} />
+        <button className="btn btn--block" onClick={next} disabled={busy}>
+          {step === 4 ? 'Finish' : step === 5 ? (needsInstall ? "I'll do this later" : "Let's go") : 'Continue'}
+        </button>
       </div>
     </main>
+  );
+}
+
+/** One month at a time, last ~3 months selectable, Sunday-first. */
+function MonthPicker({ today, value, onChange }: { today: ISODate; value: ISODate | null; onChange: (d: ISODate | null) => void }) {
+  const [y, m] = today.split('-').map(Number);
+  const [cursor, setCursor] = useState({ year: y, month: m - 1 });
+  const minDate = addDays(today, -90);
+  const first = Date.UTC(cursor.year, cursor.month, 1) / 86_400_000;
+  const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate();
+  const lead = new Date(first * 86_400_000).getUTCDay();
+  const isCurrentMonth = cursor.year === y && cursor.month === m - 1;
+  const canGoBack = fromDayNumber(first) > minDate;
+  const shift = (d: number) => setCursor(({ year, month }) => ({ year: year + Math.floor((month + d) / 12), month: (((month + d) % 12) + 12) % 12 }));
+
+  return (
+    <div className="card" style={{ background: 'var(--surface-2)', boxShadow: 'none' }}>
+      <div className="calendar__head">
+        <button type="button" className="icon-btn" onClick={() => shift(-1)} disabled={!canGoBack} aria-label="Previous month"><ChevronLeft /></button>
+        <h2>{formatMonth(cursor.year, cursor.month)}</h2>
+        <button type="button" className="icon-btn" onClick={() => shift(1)} disabled={isCurrentMonth} aria-label="Next month"><ChevronRight /></button>
+      </div>
+      <div className="calendar__grid">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="calendar__dow">{d}</div>)}
+        {Array.from({ length: lead }, (_, i) => <div key={`p${i}`} />)}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const d = fromDayNumber(first + i);
+          const disabled = d > today || d < minDate;
+          return (
+            <button
+              key={d}
+              type="button"
+              className={`day${d === value ? ' day--period-logged' : ''}`}
+              disabled={disabled}
+              style={disabled ? { opacity: 0.3 } : undefined}
+              aria-pressed={d === value}
+              onClick={() => onChange(d === value ? null : d)}
+            >
+              <span>{i + 1}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

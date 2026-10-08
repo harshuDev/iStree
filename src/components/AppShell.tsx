@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { CalendarIcon, CheckInIcon, HomeIcon, InsightsIcon, SettingsIcon } from './Icons';
+import { CalendarIcon, HomeIcon, InsightsIcon, LogIcon, UserIcon } from './Icons';
 import { useSettings, useUpdateSettings } from '../hooks/queries';
 import { deviceTimeZone } from '../lib/dates';
 import { InstallBanner } from './InstallBanner';
 
 const tabs = [
-  { to: '/', label: 'Today', Icon: HomeIcon, end: true },
-  { to: '/cycle', label: 'Cycle', Icon: CalendarIcon },
-  { to: '/check-in', label: 'Check-in', Icon: CheckInIcon },
+  { to: '/', label: 'Home', Icon: HomeIcon, end: true },
+  { to: '/cycle', label: 'Calendar', Icon: CalendarIcon },
+  { to: '/check-in', label: 'Log', Icon: LogIcon },
   { to: '/insights', label: 'Insights', Icon: InsightsIcon },
-  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { to: '/settings', label: 'Account', Icon: UserIcon },
 ];
 
 export function AppShell() {
@@ -38,8 +38,12 @@ export function AppShell() {
         <div className="bottom-nav__inner">
           {tabs.map(({ to, label, Icon, end }) => (
             <NavLink key={to} to={to} end={end}>
-              <Icon />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon filled={isActive} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </div>

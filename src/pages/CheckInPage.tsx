@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChipGroup, ErrorNote, Spinner, Stepper, Switch } from '../components/ui';
+import { ChevronLeft, ChevronRight, FlowIcon } from '../components/Icons';
+import { WaterDrop } from '../components/WaterDrop';
+import { ErrorNote, PickGrid, SectionTitle, Spinner, Stepper, Switch, TopBar } from '../components/ui';
 import { useCycleState, useDailyLog, useSaveDailyLog } from '../hooks/queries';
 import { ENERGY_LABELS, FLOW_OPTIONS, MOOD_OPTIONS, SYMPTOM_OPTIONS } from '../lib/constants';
-import { addDays, phaseForDate, PHASE_LABEL, type ISODate } from '../lib/cycle';
+import { addDays, phaseForDate, PHASE_LABEL, toDayNumber, type ISODate } from '../lib/cycle';
 import type { DailyLog, FlowIntensity } from '../lib/database.types';
 import { formatDate } from '../lib/dates';
 import { cancelLocalReminder, scheduleLocalReminder, useLocalReminders } from '../lib/localReminders';
@@ -31,10 +33,16 @@ const fromLog = (log: DailyLog | null | undefined): FormState => ({
   notes: log?.notes ?? '',
 });
 
+const FLOW_PICKS = FLOW_OPTIONS.map((o) => ({ ...o, icon: <FlowIcon level={o.value} /> }));
+const MOOD_PICKS = MOOD_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.emoji }));
+const SYMPTOM_PICKS = SYMPTOM_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.emoji }));
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export function CheckInPage() {
   const [params, setParams] = useSearchParams();
   const { today, cycles, settings, context } = useCycleState();
-  const date: ISODate = params.get('date') && params.get('date')! <= today ? params.get('date')! : today;
+  const requested = params.get('date');
+  const date: ISODate = requested && requested <= today ? requested : today;
   const { data: log, isLoading } = useDailyLog(date);
   const save = useSaveDailyLog();
   const [form, setForm] = useState<FormState>(() => fromLog(null));
@@ -56,34 +64,50 @@ export function CheckInPage() {
     setSaved(true);
   };
 
-  const phase = settings ? phaseForDate(cycles, settings, date) : null;
-  const goDay = (delta: number) => {
-    const next = addDays(date, delta);
-    if (next <= today) setParams(next === today ? {} : { date: next });
+  const goTo = (d: ISODate) => {
+    if (d <= today) setParams(d === today ? {} : { date: d });
   };
+
+  // Week (Sun–Sat) containing the selected date.
+  const weekStart = addDays(date, -new Date(`${date}T00:00:00Z`).getUTCDay());
+  const week = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const phase = settings ? phaseForDate(cycles, settings, date) : null;
 
   return (
     <form className="page" onSubmit={submit}>
-      <header className="page-header">
+      <TopBar title="Add log" />
+
+      <section className="card" style={{ gap: 10 }}>
         <div className="row row--between">
-          <button type="button" className="btn btn--secondary btn--small" style={{ width: 44, height: 44, padding: 0 }} onClick={() => goDay(-1)} aria-label="Previous day">‹</button>
+          <button type="button" className="icon-btn" onClick={() => goTo(addDays(weekStart, -7))} aria-label="Previous week"><ChevronLeft /></button>
           <div className="center">
-            <h1>{date === today ? 'Today' : formatDate(date, 'long')}</h1>
-            {phase && <p className="small">{PHASE_LABEL[phase]} phase</p>}
+            <strong>{date === today ? 'Today' : formatDate(date, 'long')}</strong>
+            {phase && <div className="tiny faint">{PHASE_LABEL[phase]} phase</div>}
           </div>
-          <button type="button" className="btn btn--secondary btn--small" style={{ width: 44, height: 44, padding: 0 }} onClick={() => goDay(1)} disabled={date >= today} aria-label="Next day">›</button>
+          <button type="button" className="icon-btn" onClick={() => goTo(addDays(weekStart, 7) > today ? today : addDays(weekStart, 7))} disabled={addDays(weekStart, 6) >= today} aria-label="Next week"><ChevronRight /></button>
         </div>
-      </header>
+        <div className="date-strip" role="group" aria-label="Choose a day">
+          {week.map((d, i) => (
+            <span key={`dow-${d}`} className={`date-strip__dow${d === today ? ' date-strip__dow--today' : ''}`}>{d === today ? 'Today' : DOW[i]}</span>
+          ))}
+          {week.map((d) => (
+            <button key={d} type="button" aria-pressed={d === date} disabled={toDayNumber(d) > toDayNumber(today)} onClick={() => goTo(d)} aria-label={formatDate(d, 'long')}>
+              {Number(d.slice(8))}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {isLoading ? (
-        <div className="center"><Spinner /></div>
+        <div className="splash"><Spinner /></div>
       ) : (
         <>
           <section className="card">
-            <h2>Flow</h2>
-            <div className="segmented" role="group" aria-label="Flow intensity">
-              {FLOW_OPTIONS.map((o) => (
-                <button key={o.value} type="button" aria-pressed={form.flow_intensity === o.value} onClick={() => set('flow_intensity', form.flow_intensity === o.value ? null : o.value)}>
+            <SectionTitle title="Flow" />
+            <div className="pick-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+              {FLOW_PICKS.map((o) => (
+                <button key={o.value} type="button" className="pick" aria-pressed={form.flow_intensity === o.value} onClick={() => set('flow_intensity', form.flow_intensity === o.value ? null : o.value)}>
+                  <span className="pick__icon" aria-hidden>{o.icon}</span>
                   {o.label}
                 </button>
               ))}
@@ -91,52 +115,46 @@ export function CheckInPage() {
           </section>
 
           <section className="card">
-            <h2>Mood</h2>
-            <ChipGroup label="Mood" options={MOOD_OPTIONS} value={form.mood ? [form.mood as (typeof MOOD_OPTIONS)[number]['value']] : []} onChange={(v) => set('mood', v[0] ?? null)} />
+            <SectionTitle title="Symptoms" />
+            <PickGrid label="Symptoms" multiple options={SYMPTOM_PICKS} value={form.symptoms} onChange={(v) => set('symptoms', v)} />
           </section>
 
           <section className="card">
-            <h2>Symptoms</h2>
-            <ChipGroup
-              label="Symptoms"
-              multiple
-              options={SYMPTOM_OPTIONS}
-              value={form.symptoms as (typeof SYMPTOM_OPTIONS)[number]['value'][]}
-              onChange={(v) => set('symptoms', v)}
-            />
+            <SectionTitle title="Mood" />
+            <PickGrid label="Mood" options={MOOD_PICKS} value={form.mood ? [form.mood] : []} onChange={(v) => set('mood', v[0] ?? null)} />
           </section>
 
           <section className="card">
-            <div className="row row--between">
-              <div>
-                <h2>Water</h2>
-                <p className="small muted">Aim for about {formatWater(DAILY_WATER_GOAL_ML)} a day</p>
+            <SectionTitle title="Drink water" />
+            <div className="water">
+              <WaterDrop ml={form.water_intake} goal={DAILY_WATER_GOAL_ML} />
+              <div className="water__amount">
+                {form.water_intake >= 1000 ? (form.water_intake / 1000).toLocaleString(LOCALE, { maximumFractionDigits: 2 }) : form.water_intake}
+                <small>{form.water_intake >= 1000 ? 'L' : 'mL'}</small>
               </div>
-              <Stepper label="water intake" value={form.water_intake} onChange={(v) => set('water_intake', v)} min={0} max={10000} step={GLASS_ML} format={formatWater} />
+              <span className="small faint">Daily goal: {formatWater(DAILY_WATER_GOAL_ML)}</span>
             </div>
-            <div className="chips" role="group" aria-label="Add water">
-              {[
-                { ml: GLASS_ML, label: '+ Glass (250 ml)' },
-                { ml: 500, label: '+ Bottle (500 ml)' },
-                { ml: 1000, label: '+ 1 L' },
-              ].map((o) => (
-                <button key={o.ml} type="button" className="chip" onClick={() => set('water_intake', Math.min(10000, form.water_intake + o.ml))}>
-                  {o.label}
-                </button>
-              ))}
+            <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <button type="button" className="btn btn--secondary btn--small" aria-label="Remove a glass" disabled={form.water_intake === 0} onClick={() => set('water_intake', Math.max(0, form.water_intake - GLASS_ML))}>−</button>
+              <button type="button" className="btn btn--blue btn--small" onClick={() => set('water_intake', Math.min(10000, form.water_intake + GLASS_ML))}>💧 Drink (250 mL)</button>
+              <button type="button" className="btn btn--secondary btn--small" onClick={() => set('water_intake', Math.min(10000, form.water_intake + 500))}>+500 mL</button>
+              <button type="button" className="btn btn--secondary btn--small" onClick={() => set('water_intake', Math.min(10000, form.water_intake + 1000))}>+1 L</button>
             </div>
+          </section>
+
+          <section className="card">
             <div className="row row--between">
               <div>
                 <h2>Sleep</h2>
-                <p className="small muted">Last night</p>
+                <p className="tiny faint">Last night</p>
               </div>
               <Stepper label="hours of sleep" value={form.sleep_hours} onChange={(v) => set('sleep_hours', v)} min={0} max={24} step={0.5} format={(v) => `${v} h`} />
             </div>
           </section>
 
           <section className="card">
-            <h2>Energy & rest</h2>
-            <div className="segmented" role="group" aria-label="Energy level">
+            <SectionTitle title="Energy & rest" />
+            <div className="segmented segmented--plain" role="group" aria-label="Energy level">
               {ENERGY_LABELS.map((label, i) => (
                 <button key={label} type="button" aria-pressed={form.energy_level === i + 1} onClick={() => set('energy_level', form.energy_level === i + 1 ? null : i + 1)}>
                   {label}
@@ -148,18 +166,20 @@ export function CheckInPage() {
 
           <section className="card">
             <div className="field">
-              <label htmlFor="notes">Notes</label>
-              <textarea id="notes" className="input" maxLength={2000} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Anything you want to remember…" />
+              <label htmlFor="notes">Note</label>
+              <textarea id="notes" className="input" maxLength={2000} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="How are you feeling today?" />
             </div>
           </section>
 
-          <ErrorNote error={save.error} />
-          {saved && <div className="alert alert--success">Saved. Thank you for checking in 🌸</div>}
-          <button className="btn btn--block" disabled={save.isPending}>
-            {save.isPending ? 'Saving…' : log ? 'Update check-in' : 'Save check-in'}
-          </button>
-
           {date === today && <QuickReminders phase={context?.phase ?? 'follicular'} />}
+
+          <div className="sticky-actions stack" style={{ gap: 8 }}>
+            <ErrorNote error={save.error} />
+            {saved && <div className="alert alert--success">Saved. Thank you for checking in 🌸</div>}
+            <button className="btn btn--block" disabled={save.isPending}>
+              {save.isPending ? 'Saving…' : log ? 'Update log' : 'Save'}
+            </button>
+          </div>
         </>
       )}
     </form>
@@ -172,8 +192,8 @@ function QuickReminders({ phase }: { phase: Parameters<typeof scheduleLocalRemin
   if (!allowed) return null;
   return (
     <section className="card">
-      <h2>Nudge me later</h2>
-      <p className="small muted">Works while iStree stays open in the background.</p>
+      <SectionTitle title="Nudge me later" />
+      <p className="tiny faint">Works while iStree stays open in the background.</p>
       <div className="chips">
         <button type="button" className="chip" onClick={() => scheduleLocalReminder('water_nudge', 60, phase)}>💧 Water in 1 h</button>
         <button type="button" className="chip" onClick={() => scheduleLocalReminder('rest_nudge', 30, phase)}>🧘 Rest in 30 min</button>

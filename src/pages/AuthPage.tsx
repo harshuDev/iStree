@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { sendPasswordReset, signInWithPassword, signUp } from '../services/auth';
+import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '../components/Icons';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { sendPasswordReset, signInWithPassword, signUp } from '../services/auth';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
@@ -10,12 +11,14 @@ const HERO = {
   signin: {
     src: '/auth/sign-in.webp',
     alt: 'Illustrated planner page tracking mood, hydration, sleep and meals around a daily wheel',
-    title: 'Welcome back',
+    title: 'Welcome Back! 👋',
+    subtitle: 'Access your iStree account and stay on top of your cycle.',
   },
   signup: {
     src: '/auth/create-account.webp',
     alt: 'Illustrated hand holding a menstrual cup with flowers growing from it',
-    title: 'Your cycle, your rhythm',
+    title: 'Join iStree Today ✨',
+    subtitle: 'Sign up to start tracking your cycle today.',
   },
 } as const;
 
@@ -23,6 +26,7 @@ export function AuthPage() {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -46,17 +50,18 @@ export function AuthPage() {
     }
   };
 
-  const needsPassword = mode === 'signin' || mode === 'signup';
-  const heroMode = mode === 'signup' ? 'signup' : 'signin';
   const switchMode = (m: Mode) => {
     setMode(m);
     setError(null);
     setNotice(null);
   };
 
+  const heroMode = mode === 'signup' ? 'signup' : 'signin';
+  const needsPassword = mode !== 'reset';
+
   return (
     <main className="app app--bare">
-      <div className="page">
+      <div className="page" style={{ paddingTop: 8 }}>
         <div className="auth-hero">
           {(Object.keys(HERO) as (keyof typeof HERO)[]).map((key) => (
             <img
@@ -70,12 +75,11 @@ export function AuthPage() {
           ))}
         </div>
 
-        <div className="row" style={{ gap: 12 }}>
-          <img src="/pwa-192x192.png" alt="" width={44} height={44} style={{ borderRadius: 12 }} />
-          <div className="stack" style={{ gap: 2 }}>
-            <h1 style={{ fontSize: '1.35rem' }}>{mode === 'reset' ? 'iStree' : HERO[heroMode].title}</h1>
-            <p className="muted small">Gentle cycle tracking with reminders that follow your rhythm.</p>
-          </div>
+        <div className="stack" style={{ gap: 6 }}>
+          <h1>{mode === 'reset' ? 'Forgot Password? 🔑' : HERO[heroMode].title}</h1>
+          <p className="muted small">
+            {mode === 'reset' ? "Don't worry — enter your registered email and we'll send you a reset link." : HERO[heroMode].subtitle}
+          </p>
         </div>
 
         {!isSupabaseConfigured && (
@@ -83,7 +87,7 @@ export function AuthPage() {
         )}
 
         {mode !== 'reset' && (
-          <div className="segmented" role="group" aria-label="Sign-in method">
+          <div className="segmented segmented--plain" role="group" aria-label="Account">
             {(['signin', 'signup'] as const).map((m) => (
               <button key={m} type="button" aria-pressed={mode === m} onClick={() => switchMode(m)}>
                 {m === 'signin' ? 'Sign in' : 'Create account'}
@@ -92,47 +96,59 @@ export function AuthPage() {
           </div>
         )}
 
-        <form className="card" onSubmit={submit}>
-          {mode === 'reset' && <h2>Reset your password</h2>}
+        <form className="stack" style={{ gap: 16 }} onSubmit={submit}>
           <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" className="input" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label htmlFor="email">{mode === 'reset' ? 'Registered email address' : 'Email'}</label>
+            <div className="input-wrap">
+              <MailIcon />
+              <input id="email" className="input" type="email" placeholder="Email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
           </div>
           {needsPassword && (
             <div className="field">
               <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                className="input"
-                type="password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                minLength={8}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="input-wrap">
+                <LockIcon />
+                <input
+                  id="password"
+                  className="input input--trailing"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  minLength={8}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button type="button" className="icon-btn" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((v) => !v)}>
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
+          )}
+          {mode === 'signin' && (
+            <button type="button" className="link-btn" style={{ alignSelf: 'flex-end' }} onClick={() => switchMode('reset')}>
+              Forgot password?
+            </button>
           )}
           {error && <div className="alert alert--error">{error}</div>}
           {notice && <div className="alert alert--success">{notice}</div>}
           <button className="btn btn--block" disabled={busy}>
-            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
+            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Sign up' : 'Send reset link'}
           </button>
-          {mode === 'signin' && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => switchMode('reset')}>
-              Forgot password?
-            </button>
-          )}
-          {mode === 'reset' && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => switchMode('signin')}>
-              Back to sign in
-            </button>
+          {mode === 'reset' ? (
+            <button type="button" className="link-btn" onClick={() => switchMode('signin')}>Back to sign in</button>
+          ) : (
+            <p className="center small muted">
+              {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+              <button type="button" className="link-btn" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}>
+                {mode === 'signin' ? 'Sign up' : 'Sign in'}
+              </button>
+            </p>
           )}
         </form>
 
-        <p className="small muted center">
-          Your health data is private to your account and never shared with analytics or advertisers.
-        </p>
+        <p className="tiny faint center">Your health data is private to your account and never shared with analytics or advertisers.</p>
       </div>
     </main>
   );

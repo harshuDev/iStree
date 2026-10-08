@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { buildCalendarMarks, fromDayNumber, toDayNumber, type CycleRecord, type CycleSettings, type ISODate } from '../lib/cycle';
 import { formatDate, formatMonth } from '../lib/dates';
+import { ChevronLeft, ChevronRight } from './Icons';
 
 // Weeks start on Sunday, as on Indian calendars.
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -49,25 +50,22 @@ export function Calendar({ cycles, settings, today, selected, onSelect, loggedDa
   return (
     <div className="calendar">
       <div className="calendar__head">
-        <button type="button" onClick={() => shift(-1)} aria-label="Previous month">‹</button>
+        <button type="button" className="icon-btn" onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft /></button>
         <h2>{formatMonth(cursor.year, cursor.month)}</h2>
-        <button type="button" onClick={() => shift(1)} aria-label="Next month">›</button>
+        <button type="button" className="icon-btn" onClick={() => shift(1)} aria-label="Next month"><ChevronRight /></button>
       </div>
       <div className="calendar__grid">
         {DOW.map((d) => (
-          <div key={d} className="calendar__dow" aria-hidden>{d.slice(0, 1)}</div>
+          <div key={d} className="calendar__dow" aria-hidden>{d}</div>
         ))}
         {cells.map((date, i) => {
           if (!date) return <div key={`pad-${i}`} className="day day--outside" />;
           const m = marks.get(date);
           const cls = [
             'day',
-            m?.period && `day--period-${m.period}`,
-            m?.fertile && 'day--fertile',
-            m?.ovulation && 'day--ovulation',
+            m?.period ? `day--period-${m.period}` : m?.ovulation ? 'day--ovulation' : m?.fertile ? 'day--fertile' : '',
             date === today && 'day--today',
             date === selected && 'day--selected',
-            loggedDates?.has(date) && 'day--has-log',
           ]
             .filter(Boolean)
             .join(' ');
@@ -76,6 +74,7 @@ export function Calendar({ cycles, settings, today, selected, onSelect, loggedDa
             m?.period === 'predicted' && 'predicted period',
             m?.ovulation && 'estimated ovulation',
             m?.fertile && !m?.ovulation && 'fertile window',
+            loggedDates?.has(date) && 'has a log',
             date === today && 'today',
           ]
             .filter(Boolean)
@@ -90,15 +89,17 @@ export function Calendar({ cycles, settings, today, selected, onSelect, loggedDa
               aria-pressed={date === selected}
             >
               <span>{Number(date.slice(8))}</span>
+              {loggedDates?.has(date) ? <i className="day__dot" /> : <i style={{ height: 4 }} />}
             </button>
           );
         })}
       </div>
       <div className="legend" aria-hidden>
         <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--period)' }} />Period</span>
-        <span className="legend__item"><span className="legend__swatch" style={{ border: '2px dashed var(--period)' }} />Predicted</span>
-        <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--fertile-bg)', borderRadius: 4 }} />Fertile window</span>
-        <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--ovulation)', width: 8, height: 8 }} />Ovulation</span>
+        <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--period-soft)' }} />Predicted</span>
+        <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--fertile)', boxShadow: 'inset 0 0 0 1px var(--yellow)' }} />Fertile</span>
+        <span className="legend__item"><span className="legend__swatch" style={{ background: 'var(--ovulation)' }} />Ovulation</span>
+        <span className="legend__item"><i className="day__dot" style={{ opacity: 1, background: 'var(--text-2)' }} />Logged</span>
       </div>
     </div>
   );

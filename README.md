@@ -122,7 +122,11 @@ Local stack (Docker): `npx supabase start`, then `npx supabase db reset` replays
 
 ### Option B: Dashboard
 
-Open **SQL Editor** and run each file in `supabase/migrations/` **in filename order**. Before running the second file, enable **pg_cron** and **pg_net** under **Database → Extensions** (the migration also tries to enable them).
+1. **Database → Extensions:** enable **pg_cron** and **pg_net**.
+2. **SQL Editor → New query:** paste all of [`supabase/setup.sql`](supabase/setup.sql) and click **Run**. It contains every migration in order, plus the Vault secrets for the reminder schedule. Run it once, on a fresh project.
+3. The last result row, `cron_secret_copy_this`, is a secret generated in your database. Set it as the Edge Function secret `CRON_SECRET`.
+
+`setup.sql` is generated from the migrations by `npm run setup-sql`. If you later switch to the CLI, first mark these migrations as already applied: `npx supabase migration repair --status applied 20261007000000 20261007000100 20261008000000`.
 
 ### Regenerate types after schema changes
 

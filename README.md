@@ -145,6 +145,17 @@ Email/password and magic links work out of the box. For production volumes, conf
 
 ---
 
+## Cloud-only setup (no local machine)
+
+Everything can be done from a browser, including on a phone:
+
+1. **Database:** paste [`supabase/setup.sql`](supabase/setup.sql) into the Supabase SQL Editor and run it. Save the `cron_secret_copy_this` value as the Edge Function secret `CRON_SECRET`.
+2. **Supabase access token:** [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) → Generate new token. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, named `SUPABASE_ACCESS_TOKEN`.
+3. **Push keys:** GitHub → **Actions → "Supabase: set up push keys" → Run workflow**. This generates the VAPID keys on GitHub's servers and saves them straight into Supabase secrets; the private key is never displayed. Copy the public key from the run's **Summary** for Vercel.
+4. **Edge Functions:** GitHub → **Actions → "Supabase: deploy Edge Functions" → Run workflow**. After this it redeploys automatically whenever `supabase/functions/` changes.
+5. **Vercel:** import the repo and set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_VAPID_PUBLIC_KEY`.
+6. **Auth URLs:** Supabase → Authentication → URL Configuration → set the Site URL and add `https://<your-app>.vercel.app/**` to the redirect URLs.
+
 ## 3. Push notifications
 
 ### Deploy the Edge Functions and secrets

@@ -1,0 +1,67 @@
+# Deploys the Supabase Edge Functions from GitHub's servers — no local CLI.
+# Runs automatically when anything under supabase/functions changes, and can
+# be run by hand: GitHub → Actions → "Supabase: deploy Edge Functions".
+# Requires the repository secret SUPABASE_ACCESS_TOKEN.
+name: "Supabase: deploy Edge Functions"
+
+on:
+  push:
+    branches: [main, ccr-e017b8b7-2wypkw]
+    paths:
+      - supabase/functions/**
+      - supabase/config.toml
+      - .github/workflows/supabase-functions.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: qrgbfxrzypqtckfdfkil
+    steps:
+      - name: Check Supabase access token
+        id: token
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::Add the repository secret SUPABASE_ACCESS_TOKEN first (Settings → Secrets and variables → Actions)."
+            exit 1
+          else
+            echo "::notice::SUPABASE_ACCESS_TOKEN is not set yet, so the deploy was skipped."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+
+      - uses: supabase/setup-cli@v1
+        if: steps.token.outputs.ok == 'true'
+        with:
+          version: latest
+
+      - name: Deploy send-notifications
+        if: steps.token.outputs.ok == 'true'
+        # Verifies its own callers (cron secret or user token), so the gateway JWT check is off.
+        run: supabase functions deploy send-notifications --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Deploy delete-account
+        if: steps.token.outputs.ok == 'true'
+        run: supabase functions deploy delete-account --project-ref "$PROJECT_REF"
+
+      - name: Summary
+        if: steps.token.outputs.ok == 'true'
+        run: |
+          {
+            echo "## ✅ Edge Functions deployed"
+            echo "- send-notifications"
+            echo "- delete-account"
+          } >> "$GITHUB_STEP_SUMMARY"
